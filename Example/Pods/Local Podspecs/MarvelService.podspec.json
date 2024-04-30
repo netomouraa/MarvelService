@@ -1,0 +1,22 @@
+{
+  "name": "MarvelService",
+  "version": "0.1.0",
+  "summary": "A short description of MarvelService.",
+  "description": "TODO: Add long description of the pod here.",
+  "homepage": "https://github.com/netomouraa/MarvelService",
+  "license": {
+    "type": "MIT",
+    "file": "LICENSE"
+  },
+  "authors": {
+    "netomouraa": "Neto Moura"
+  },
+  "source": {
+    "git": "https://github.com/netomouraa/MarvelService.git",
+    "tag": "0.1.0"
+  },
+  "platforms": {
+    "ios": "10.0"
+  },
+  "source_files": "MarvelService/Classes/**/*"
+}

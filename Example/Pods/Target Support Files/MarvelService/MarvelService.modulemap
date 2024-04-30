@@ -1,0 +1,6 @@
+framework module MarvelService {
+  umbrella header "MarvelService-umbrella.h"
+
+  export *
+  module * { export * }
+}
