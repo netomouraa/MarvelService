@@ -34,7 +34,7 @@ public class MarvelService {
         networkManager.stopMonitoring()
     }
     
-    public func fetchCharacters(name: String? = nil) -> AnyPublisher<[MarvelCharacter], Error> {
+    public func fetchCharacters(name: String? = nil, limit: Int, offset: Int) -> AnyPublisher<[MarvelCharacter], Error> {
         guard networkManager.isConnectedToInternet else {
             return Fail(error: NSError(domain: "No internet connection", code: 0, userInfo: nil)).eraseToAnyPublisher()
         }
@@ -47,8 +47,8 @@ public class MarvelService {
         let ts = String(Date().timeIntervalSince1970)
         let hash = md5("\(ts)\(privateKey)\(publicKey)")
         
-        let urlString = "https://gateway.marvel.com/v1/public/characters?ts=\(ts)&apikey=\(publicKey)&hash=\(hash)\(queryString)"
-        
+        let urlString = "https://gateway.marvel.com/v1/public/characters?ts=\(ts)&apikey=\(publicKey)&hash=\(hash)&limit=\(limit)&offset=\(offset)\(queryString)"
+
         guard let url = URL(string: urlString) else {
             return Fail(error: NSError(domain: "Invalid URL", code: 0, userInfo: nil)).eraseToAnyPublisher()
         }
