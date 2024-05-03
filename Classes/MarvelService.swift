@@ -9,55 +9,61 @@
 import Foundation
 import CryptoKit
 
-public protocol MarvelServiceProtocol {
-    func fetchCharacters(completion: @escaping (Result<[MarvelCharacter], Error>) -> Void)
-}
+import Foundation
+import Combine
+import CryptoKit
 
 @available(iOS 13.0, *)
 public class MarvelService {
     @Published var characters: [MarvelCharacter] = []
-     
+    
     public static let shared = MarvelService()
-
+    
     private let publicKey = "d05c8e9956339435c43e94a1f690108f"
     private let privateKey = "26d54e7f9ab1c783ee61de7d5c3f9d156b24f0c0"
     
+    private var cancellable: AnyCancellable?
+    
     public init() {}
-
-    public func fetchCharacters(completion: @escaping (Result<[MarvelCharacter], Error>) -> Void) {
+    
+    public func fetchCharacters(name: String? = nil) -> AnyPublisher<[MarvelCharacter], Error> {
+        var queryString = ""
+        if let name = name {
+            queryString += "&name=\(name)"
+        }
+        
         let ts = String(Date().timeIntervalSince1970)
         let hash = md5("\(ts)\(privateKey)\(publicKey)")
         
-        let urlString = "https://gateway.marvel.com/v1/public/characters?ts=\(ts)&apikey=\(publicKey)&hash=\(hash)"
-        
+        let urlString = "https://gateway.marvel.com/v1/public/characters?ts=\(ts)&apikey=\(publicKey)&hash=\(hash)\(queryString)"
         
         guard let url = URL(string: urlString) else {
-            completion(.failure(NSError(domain: "Invalid URL", code: 0, userInfo: nil)))
-            return
+            return Fail(error: NSError(domain: "Invalid URL", code: 0, userInfo: nil)).eraseToAnyPublisher()
         }
         
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data else {
-                if let error = error {
-                    completion(.failure(error))
-                } else {
-                    completion(.failure(NSError(domain: "Unknown error", code: 0, userInfo: nil)))
+        return URLSession.shared.dataTaskPublisher(for: url)
+            .tryMap { data, response -> Data in
+                guard let httpResponse = response as? HTTPURLResponse, 200...299 ~= httpResponse.statusCode else {
+                    throw NSError(domain: "Invalid response", code: 0, userInfo: nil)
                 }
-                return
+                return data
             }
-            
-            do {
+            .tryMap { data -> [MarvelCharacter] in
                 let result = try JSONDecoder().decode(MarvelResponse.self, from: data)
                 let characters = result.data.results
-                if characters.isEmpty {
-                    completion(.failure(NSError(domain: "Empty character list", code: 0, userInfo: nil)))
-                } else {
-                    completion(.success(characters))
+                guard !characters.isEmpty else {
+                    throw NSError(domain: "Empty character list", code: 0, userInfo: nil)
                 }
-            } catch {
-                completion(.failure(error))
+                return characters
             }
-        }.resume()
+            .mapError { error in
+                if let error = error as? NSError {
+                    return error
+                } else {
+                    return NSError(domain: "Unknown error", code: 0, userInfo: nil)
+                }
+            }
+            .eraseToAnyPublisher()
     }
     
     private func md5(_ input: String) -> String {
@@ -65,5 +71,4 @@ public class MarvelService {
         let hash = Insecure.MD5.hash(data: data)
         return hash.map { String(format: "%02hhx", $0) }.joined()
     }
-
 }
